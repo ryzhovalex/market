@@ -13,6 +13,7 @@ import (
 	"time"
 )
 
+var VERSION string = "0.1.0"
 var state State
 
 type CoinAmount = int32
@@ -126,7 +127,7 @@ func NewErr(msg string, code string) *ErrData {
 	return &ErrData{msg, code}
 }
 
-func buy(args []string) Err {
+func cliBuy(args []string) Err {
 	itemKey := args[0]
 	item, ok := KEY_TO_ITEM[itemKey]
 	if !ok {
@@ -140,10 +141,16 @@ func buy(args []string) Err {
 			item.Price,
 		), "")
 	}
+	oldBalance := state.Balance
+	state.Balance -= item.Price
+	Printf(
+		"Bought item %s for a price %d. Balance change: %d -> %d",
+		item.Key, item.Price, oldBalance, state.Balance,
+	)
 	return nil
 }
 
-func job(args []string) Err {
+func cliJob(args []string) Err {
 	jobKey := args[0]
 	job, ok := KEY_TO_JOB[jobKey]
 	if !ok {
@@ -187,10 +194,34 @@ func repeat(args []string) Err {
 var TRANSACTION_FN_KEYS = []string{"buy", "job"}
 var FNS = map[string]func(args []string) Err{
 	"q":       quit,
-	"buy":     buy,
-	"job":     job,
-	"balance": balance,
 	"dir":     cliDir,
+	"version": cliVersion,
+	"buy":     cliBuy,
+	"job":     cliJob,
+	"balance": cliBalance,
+	"items":   cliItems,
+	"jobs":    cliJobs,
+}
+
+func cliItems(args []string) Err {
+	Print("ITEMS")
+	for k, v := range KEY_TO_ITEM {
+		Printf("\t%s: %d coins", k, v.Price)
+	}
+	return nil
+}
+
+func cliJobs(args []string) Err {
+	Print("JOBS")
+	for k, v := range KEY_TO_JOB {
+		Printf("\t%s: %d coins", k, v.Reward)
+	}
+	return nil
+}
+
+func cliVersion(args []string) Err {
+	Printf("Version: %s", VERSION)
+	return nil
 }
 
 func ToErr(e error) Err {
@@ -206,7 +237,7 @@ func cliDir(args []string) Err {
 	return nil
 }
 
-func balance(args []string) Err {
+func cliBalance(args []string) Err {
 	Printf("Balance: %d", state.Balance)
 	return nil
 }
