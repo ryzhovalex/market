@@ -72,13 +72,24 @@ func Printf(f string, obj ...any) {
 	Print(fmt.Sprintf(f, obj...))
 }
 
-func writeState() {
-	b, err := json.MarshalIndent(state, "", "    ")
-	Unwrap(err)
+func cliWriteState(args []string) Err {
+	b, berr := json.MarshalIndent(state, "", "    ")
+	if berr != nil {
+		return ToErr(berr)
+	}
+
 	workingDir, e := getWorkingDir()
-	Unwrap(e)
-	err = os.WriteFile(workingDir+"/var/state.json", b, 0644)
-	Unwrap(err)
+	if e != nil {
+		return e
+	}
+
+	berr = os.WriteFile(workingDir+"/var/state.json", b, 0644)
+	if berr != nil {
+		return ToErr(berr)
+	}
+
+	Print("State written")
+	return nil
 }
 
 var lastInp string = ""
@@ -166,7 +177,6 @@ func cliJob(args []string) Err {
 }
 
 func quit(args []string) Err {
-	writeState()
 	return NewErr("Interrupt", "interrupt_err")
 }
 
@@ -175,6 +185,12 @@ func repeat(args []string) Err {
 	Unwrap(classicErr)
 
 	cmd := args[1]
+	if !slices.Contains(TRANSACTION_FN_KEYS, cmd) {
+		return NewErr(
+			"Repeat function can work only with transaction keys",
+			"",
+		)
+	}
 	f, ok := FNS[cmd]
 	if !ok {
 		return NewErr("Unrecognized command \""+cmd+"\"", "")
@@ -191,7 +207,7 @@ func repeat(args []string) Err {
 
 // Functions that are considered as transactional - after their execution a
 // transaction record will be created.
-var TRANSACTION_FN_KEYS = []string{"buy", "job"}
+var TRANSACTION_FN_KEYS = []string{"r", "buy", "job"}
 var FNS = map[string]func(args []string) Err{
 	"q":       quit,
 	"dir":     cliDir,
@@ -201,6 +217,7 @@ var FNS = map[string]func(args []string) Err{
 	"balance": cliBalance,
 	"items":   cliItems,
 	"jobs":    cliJobs,
+	"w":       cliWriteState,
 }
 
 func cliItems(args []string) Err {
@@ -249,10 +266,10 @@ func loop() {
 	for {
 		inp, err := readInp()
 		if err != nil {
-			Print(err)
 			if err.Code() == "interrupt_err" {
 				break
 			}
+			Print(err)
 			continue
 		}
 		if strings.ReplaceAll(lastInp, " ", "") == "" {
@@ -277,10 +294,10 @@ func loop() {
 
 		err = f(args)
 		if err != nil {
-			Print(err)
 			if err.Code() == "interrupt_err" {
 				break
 			}
+			Print(err)
 			continue
 		}
 		// Do not save transaction on error.
@@ -349,7 +366,6 @@ func init() {
 }
 
 func main() {
-	defer writeState()
 	// Setup interrupt signals so we actually can intercept keyboard interrupt
 	// in things like `inp.Scan()`. Don't know entirely why it needs, but by
 	// trial and error i've managed to do this.
