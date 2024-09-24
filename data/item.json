@@ -1,0 +1,18 @@
+[
+    {
+        "key": "energy_drink",
+        "price": 100
+    },
+    {
+        "key": "snacks",
+        "price": 150
+    },
+    {
+        "key": "meal",
+        "price": 25
+    },
+    {
+        "key": "gaming",
+        "price": 7
+    }
+]
