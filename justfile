@@ -10,7 +10,7 @@ test t="":
 check: lint test
 
 run:
-    @ MARKET_MODE=dev go run .
+    @ go run .
 
 install:
     @ go build
