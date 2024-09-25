@@ -1,7 +1,7 @@
 _default:
     app:
         root_dir: ${cwd}
-        var_dir: ${this.app.root_dir}/var/${buildmode}/${usermode}
+        var_dir: ${this.app.root_dir}/var/${build}/${mode}
     bob:
         dir: ${this.app.var_dir}/bob
 test:

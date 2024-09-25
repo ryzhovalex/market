@@ -11,7 +11,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/slimebones/market/internal/apprc"
+	"github.com/slimebones/market/internal/app"
 	"github.com/slimebones/market/internal/err"
 	"github.com/slimebones/market/internal/log"
 	"github.com/slimebones/market/internal/times"
@@ -282,7 +282,7 @@ func getWorkingDir() (string, err.E) {
 }
 
 func init() {
-	e := apprc.Load()
+	e := app.Init()
 	err.Unwrap(e)
 
 	workingDir, e := getWorkingDir()

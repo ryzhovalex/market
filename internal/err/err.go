@@ -2,6 +2,9 @@ package err
 
 import "fmt"
 
+var CODE_ERR string = "err"
+var CODE_NOT_FOUND string = "not_found_err"
+
 type ErrData struct {
 	msg  string
 	code string
@@ -27,13 +30,13 @@ func (e *ErrData) Code() string {
 
 func New(msg string, code string) *ErrData {
 	if code == "" {
-		code = "err"
+		code = CODE_ERR
 	}
 	return &ErrData{msg, code}
 }
 
 func FromBase(e error) E {
-	return New(e.Error(), "err")
+	return New(e.Error(), CODE_ERR)
 }
 
 func Unwrap(err error) {
