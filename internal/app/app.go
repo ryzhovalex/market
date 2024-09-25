@@ -7,19 +7,16 @@ import (
 	"github.com/slimebones/market/internal/err"
 )
 
-var BUILD_ENV string = "MARKET_BUILD"
 var MODE_ENV string = "MARKET_MODE"
-var BUILD string
 var MODE string
 
 func Init() err.E {
-	BUILD = os.Getenv(BUILD_ENV)
-	if BUILD != "debug" && BUILD != "release" {
-		return err.New("Invalid build mode: "+BUILD, "")
-	}
 	MODE = os.Getenv(MODE_ENV)
+	if MODE == "" {
+		panic("Please set " + MODE_ENV)
+	}
 
-	e := apprc.Load(BUILD, MODE)
+	e := apprc.Load(MODE)
 	err.Unwrap(e)
 
 	return nil
