@@ -10,10 +10,11 @@ import (
 	"slices"
 	"strconv"
 	"strings"
-	"time"
 
+	"github.com/slimebones/market/internal/apprc"
 	"github.com/slimebones/market/internal/err"
 	"github.com/slimebones/market/internal/log"
+	"github.com/slimebones/market/internal/times"
 )
 
 var VERSION string = "0.1.0"
@@ -21,9 +22,6 @@ var state State
 
 type CoinAmount = int32
 type Id = int64
-type Dict = map[string]any
-type Query = Dict
-type GetQuery = Query
 
 type Item struct {
 	Key   string     `json:"key"`
@@ -41,9 +39,9 @@ type State struct {
 }
 
 type Transaction struct {
-	Created time.Time `json:"created"`
-	Cmd     string    `json:"cmd"`
-	Version string    `json:"version"`
+	Created times.Time `json:"created"`
+	Cmd     string     `json:"cmd"`
+	Version string     `json:"version"`
 }
 
 func cliWriteState(args []string) err.E {
@@ -165,23 +163,23 @@ var FNS = map[string]func(args []string) err.E{
 }
 
 func cliItems(args []string) err.E {
-	Info("ITEMS")
+	log.Info("ITEMS")
 	for k, v := range KEY_TO_ITEM {
-		Infof("\t%s: %d coins", k, v.Price)
+		log.Infof("\t%s: %d coins", k, v.Price)
 	}
 	return nil
 }
 
 func cliJobs(args []string) err.E {
-	Info("JOBS")
+	log.Info("JOBS")
 	for k, v := range KEY_TO_JOB {
-		Infof("\t%s: %d coins", k, v.Reward)
+		log.Infof("\t%s: %d coins", k, v.Reward)
 	}
 	return nil
 }
 
 func cliVersion(args []string) err.E {
-	Infof("Version: %s", VERSION)
+	log.Infof("Version: %s", VERSION)
 	return nil
 }
 
@@ -190,18 +188,18 @@ func cliDir(args []string) err.E {
 	if e != nil {
 		return e
 	}
-	Infof("Working dir: %s", d)
+	log.Infof("Working dir: %s", d)
 	return nil
 }
 
 func cliBalance(args []string) err.E {
-	Infof("Balance: %d", state.Balance)
+	log.Infof("Balance: %d", state.Balance)
 	return nil
 }
 
 func loop() {
-	Info("Welcome to Market!")
-	Infof("Balance: %d", state.Balance)
+	log.Info("Welcome to Market!")
+	log.Infof("Balance: %d", state.Balance)
 
 	for {
 		inp, e := readInp()
@@ -209,7 +207,7 @@ func loop() {
 			if e.Code() == "interrupt_err" {
 				break
 			}
-			Info(e)
+			log.Info(e)
 			continue
 		}
 		if strings.ReplaceAll(lastInp, " ", "") == "" {
@@ -227,7 +225,7 @@ func loop() {
 		} else {
 			f, ok = FNS[cmd]
 			if !ok {
-				Info("err:: Unrecognized command \"" + cmd + "\"")
+				log.Info("err:: Unrecognized command \"" + cmd + "\"")
 				continue
 			}
 		}
@@ -237,14 +235,14 @@ func loop() {
 			if e.Code() == "interrupt_err" {
 				break
 			}
-			Info(e)
+			log.Info(e)
 			continue
 		}
 		// Do not save transaction on error.
 		if slices.Contains(TRANSACTION_FN_KEYS, cmd) {
 			state.Transactions = append(
 				state.Transactions,
-				Transaction{Utc(), lastInp},
+				Transaction{times.Utc(), lastInp, VERSION},
 			)
 		}
 	}
@@ -284,11 +282,14 @@ func getWorkingDir() (string, err.E) {
 }
 
 func init() {
+	e := apprc.Load()
+	err.Unwrap(e)
+
 	workingDir, e := getWorkingDir()
-	Unwrap(e)
+	err.Unwrap(e)
 
 	e = jsonLoad(workingDir+"/var/state.json", &state)
-	Unwrap(e)
+	err.Unwrap(e)
 
 	var items []Item
 	e = jsonLoad(workingDir+"/data/item.json", &items)
@@ -296,13 +297,13 @@ func init() {
 		KEY_TO_ITEM[v.Key] = v
 	}
 
-	Unwrap(e)
+	err.Unwrap(e)
 	var jobs []Job
 	e = jsonLoad(workingDir+"/data/job.json", &jobs)
 	for _, v := range jobs {
 		KEY_TO_JOB[v.Key] = v
 	}
-	Unwrap(e)
+	err.Unwrap(e)
 }
 
 func main() {
