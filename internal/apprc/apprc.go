@@ -32,6 +32,10 @@ func Load(build string, mode string) err.E {
 func Get(key string) (dict.Dict, err.E) {
 	r, ok := rc[key]
 	if !ok {
-		return err.New("No such configuration with key "+key, err.CODE_NOT_FOUND)
+		return nil, err.New(
+			"No such configuration with key "+key,
+			err.CODE_NOT_FOUND)
 	}
+	rDict, ok := r.(dict.Dict)
+	return rDict, nil
 }
