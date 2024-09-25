@@ -1,4 +1,4 @@
-module github.com/slimebones/market
+module github.com/slimebones/market/app
 
 go 1.22.4
 

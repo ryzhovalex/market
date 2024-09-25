@@ -1,0 +1,5 @@
+package rc
+
+func Load() {
+
+}

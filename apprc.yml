@@ -1,3 +1,11 @@
-default:
-    root_dir: ${cwd}
-    var_dir: ${this.root_dir}/var
+_default:
+    app:
+        root_dir: ${cwd}
+        var_dir: ${this.app.root_dir}/var/${buildmode}/${usermode}
+    bob:
+        dir: ${this.app.var_dir}/bob
+test:
+dev:
+prod:
+    app:
+        root_dir: ${exedir}

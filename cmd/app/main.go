@@ -23,17 +23,6 @@ type Dict = map[string]any
 type Query = Dict
 type GetQuery = Query
 
-// Length of the standard time chunk.
-//
-// All time-related activites (such as jobs) relate to this chunk, unless
-// other is explicitly denoted. For example `primary` job will rely on this
-// chunk: so if the chunk is 30 minutes, the primary job will refer to that
-// value.
-//
-// There are other chunks besides time, but they are useless for now to denote
-// in form of static vars, e.g. `AMOUNT_CHUNK = 1`.
-var TIME_CHUNK = 30 * 60
-
 func utc() Time {
 	return time.Now().Unix()
 }
