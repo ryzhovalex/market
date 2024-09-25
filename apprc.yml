@@ -1,0 +1,3 @@
+default:
+    root_dir: ${cwd}
+    var_dir: ${this.root_dir}/var
