@@ -6,14 +6,14 @@ import (
 	"fmt"
 	"os"
 	"os/signal"
-	"path/filepath"
 	"slices"
 	"strconv"
 	"strings"
 
 	"github.com/slimebones/market/internal/app"
-	"github.com/slimebones/market/internal/err"
+	"github.com/slimebones/market/internal/errors"
 	"github.com/slimebones/market/internal/log"
+	"github.com/slimebones/market/internal/paths"
 	"github.com/slimebones/market/internal/times"
 )
 
@@ -44,20 +44,17 @@ type Transaction struct {
 	Version string     `json:"version"`
 }
 
-func cliWriteState(args []string) err.E {
+func cliWriteState(args []string) errors.E {
 	b, be := json.MarshalIndent(state, "", "    ")
 	if be != nil {
-		return err.FromBase(be)
+		return errors.FromBase(be)
 	}
 
-	workingDir, e := getWorkingDir()
-	if e != nil {
-		return e
-	}
+	workingDir := paths.MustGetCwd()
 
 	be = os.WriteFile(workingDir+"/var/state.json", b, 0644)
 	if be != nil {
-		return err.FromBase(be)
+		return errors.FromBase(be)
 	}
 
 	log.Info("State written")
@@ -66,7 +63,7 @@ func cliWriteState(args []string) err.E {
 
 var lastInp string = ""
 
-func readInp() ([]string, err.E) {
+func readInp() ([]string, errors.E) {
 	inp := bufio.NewScanner(os.Stdin)
 	fmt.Print("> ")
 	ok := inp.Scan()
@@ -80,14 +77,14 @@ func readInp() ([]string, err.E) {
 	return strings.Fields(text), nil
 }
 
-func cliBuy(args []string) err.E {
+func cliBuy(args []string) errors.E {
 	itemKey := args[0]
 	item, ok := KEY_TO_ITEM[itemKey]
 	if !ok {
-		return err.New("No such item "+itemKey, "")
+		return errors.New("No such item "+itemKey, "")
 	}
 	if item.Price > state.Balance {
-		return err.New(fmt.Sprintf(
+		return errors.New(fmt.Sprintf(
 			"Not enough coins (current=%d) to buy item %s with price %d",
 			state.Balance,
 			item.Key,
@@ -103,11 +100,11 @@ func cliBuy(args []string) err.E {
 	return nil
 }
 
-func cliJob(args []string) err.E {
+func cliJob(args []string) errors.E {
 	jobKey := args[0]
 	job, ok := KEY_TO_JOB[jobKey]
 	if !ok {
-		return err.New("No such job "+jobKey, "")
+		return errors.New("No such job "+jobKey, "")
 	}
 	oldBalance := state.Balance
 	state.Balance += job.Reward
@@ -118,24 +115,24 @@ func cliJob(args []string) err.E {
 	return nil
 }
 
-func quit(args []string) err.E {
-	return err.New("Interrupt", "interrupt_err")
+func quit(args []string) errors.E {
+	return errors.New("Interrupt", "interrupt_err")
 }
 
-func cliRepeat(args []string) err.E {
+func cliRepeat(args []string) errors.E {
 	repeatArg, be := strconv.Atoi(args[0])
-	err.Unwrap(be)
+	errors.Unwrap(be)
 
 	cmd := args[1]
 	if !slices.Contains(TRANSACTION_FN_KEYS, cmd) {
-		return err.New(
+		return errors.New(
 			"Repeat function can work only with transaction keys",
 			"",
 		)
 	}
 	f, ok := FNS[cmd]
 	if !ok {
-		return err.New("Unrecognized command \""+cmd+"\"", "")
+		return errors.New("Unrecognized command \""+cmd+"\"", "")
 	}
 	fnArgs := args[2:]
 	for i := 0; i < repeatArg; i++ {
@@ -150,7 +147,7 @@ func cliRepeat(args []string) err.E {
 // Functions that are considered as transactional - after their execution a
 // transaction record will be created.
 var TRANSACTION_FN_KEYS = []string{"r", "buy", "job"}
-var FNS = map[string]func(args []string) err.E{
+var FNS = map[string]func(args []string) errors.E{
 	"q":       quit,
 	"dir":     cliDir,
 	"version": cliVersion,
@@ -162,7 +159,7 @@ var FNS = map[string]func(args []string) err.E{
 	"w":       cliWriteState,
 }
 
-func cliItems(args []string) err.E {
+func cliItems(args []string) errors.E {
 	log.Info("ITEMS")
 	for k, v := range KEY_TO_ITEM {
 		log.Infof("\t%s: %d coins", k, v.Price)
@@ -170,7 +167,7 @@ func cliItems(args []string) err.E {
 	return nil
 }
 
-func cliJobs(args []string) err.E {
+func cliJobs(args []string) errors.E {
 	log.Info("JOBS")
 	for k, v := range KEY_TO_JOB {
 		log.Infof("\t%s: %d coins", k, v.Reward)
@@ -178,21 +175,18 @@ func cliJobs(args []string) err.E {
 	return nil
 }
 
-func cliVersion(args []string) err.E {
+func cliVersion(args []string) errors.E {
 	log.Infof("Version: %s", VERSION)
 	return nil
 }
 
-func cliDir(args []string) err.E {
-	d, e := getWorkingDir()
-	if e != nil {
-		return e
-	}
+func cliDir(args []string) errors.E {
+	d := paths.MustGetCwd()
 	log.Infof("Working dir: %s", d)
 	return nil
 }
 
-func cliBalance(args []string) err.E {
+func cliBalance(args []string) errors.E {
 	log.Infof("Balance: %d", state.Balance)
 	return nil
 }
@@ -216,7 +210,7 @@ func loop() {
 		cmd := inp[0]
 		args := inp[1:]
 
-		var f func(args []string) err.E
+		var f func(args []string) errors.E
 		var ok bool
 		// Handle repeat under special conditions since it references `FNS`
 		// under the hood, so it cannot be put as part of `FNS`.
@@ -251,45 +245,26 @@ func loop() {
 var KEY_TO_ITEM = map[string]Item{}
 var KEY_TO_JOB = map[string]Job{}
 
-func jsonLoad(path string, v any) err.E {
+func jsonLoad(path string, v any) errors.E {
 	content, be := os.ReadFile(path)
 	if be != nil {
-		return err.FromBase(be)
+		return errors.FromBase(be)
 	}
 	be = json.Unmarshal(content, &v)
 	if be != nil {
-		return err.FromBase(be)
+		return errors.FromBase(be)
 	}
 	return nil
 }
 
-func getWorkingDir() (string, err.E) {
-	useCwdDir := os.Getenv("MARKET_USE_CWD")
-	if useCwdDir == "1" {
-		r, be := os.Getwd()
-		if be != nil {
-			return "", err.FromBase(be)
-		}
-		return r, nil
-	}
-
-	exePath, be := os.Executable()
-	if be != nil {
-		return "", err.FromBase(be)
-	}
-	exPath := filepath.Dir(exePath)
-	return exPath, nil
-}
-
 func init() {
 	e := app.Init()
-	err.Unwrap(e)
+	errors.Unwrap(e)
 
-	workingDir, e := getWorkingDir()
-	err.Unwrap(e)
+	workingDir := paths.MustGetCwd()
 
 	e = jsonLoad(workingDir+"/var/state.json", &state)
-	err.Unwrap(e)
+	errors.Unwrap(e)
 
 	var items []Item
 	e = jsonLoad(workingDir+"/data/item.json", &items)
@@ -297,13 +272,13 @@ func init() {
 		KEY_TO_ITEM[v.Key] = v
 	}
 
-	err.Unwrap(e)
+	errors.Unwrap(e)
 	var jobs []Job
 	e = jsonLoad(workingDir+"/data/job.json", &jobs)
 	for _, v := range jobs {
 		KEY_TO_JOB[v.Key] = v
 	}
-	err.Unwrap(e)
+	errors.Unwrap(e)
 }
 
 func main() {

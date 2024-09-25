@@ -8,4 +8,4 @@ test:
 dev:
 prod:
     app:
-        root_dir: ${exedir}
+        root_dir: ${exe_dir}
