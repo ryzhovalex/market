@@ -6,7 +6,7 @@ import (
 	"regexp"
 
 	"github.com/slimebones/market/internal/dict"
-	"github.com/slimebones/market/internal/errors"
+	"github.com/slimebones/market/internal/errs"
 	"github.com/slimebones/market/internal/paths"
 	"gopkg.in/yaml.v3"
 )
@@ -23,7 +23,7 @@ type Resolver struct {
 	deps []string
 }
 
-func Load(mode string) errors.E {
+func Load(mode string) errs.Err {
 	var apprcPath string
 	if apprcPath = os.Getenv(APPRC_ENV); apprcPath == "" {
 		apprcPath = DEFAULT_APPRC_PATH
@@ -31,11 +31,11 @@ func Load(mode string) errors.E {
 
 	content, be := os.ReadFile(apprcPath)
 	if be != nil {
-		return errors.FromBase(be)
+		return errs.FromBase(be)
 	}
 	be = yaml.Unmarshal(content, &rc)
 	if be != nil {
-		return errors.FromBase(be)
+		return errs.FromBase(be)
 	}
 
 	e := setDefaultRcVars(mode)
@@ -61,7 +61,7 @@ func Load(mode string) errors.E {
 	return nil
 }
 
-func setDefaultRcVars(mode string) errors.E {
+func setDefaultRcVars(mode string) errs.Err {
 	rcVars["cwd"] = paths.MustGetCwd()
 	rcVars["mode"] = mode
 	rcVars["exe_dir"] = paths.MustGetExeDir()
@@ -69,13 +69,13 @@ func setDefaultRcVars(mode string) errors.E {
 }
 
 // Replace all variables with actual values
-func compile(entry dict.Dict) errors.E {
+func compile(entry dict.Dict) errs.Err {
 	for varname, resolver := range varnameToResolver {
 		resolved := dict.Dict{}
 		for _, dep := range resolver.deps {
 			depVal, ok := rcVars[dep]
 			if !ok {
-				return errors.New(
+				return errs.New(
 					"Unsatisfied dependency "+dep+" for var "+varname,
 					"",
 				)
@@ -91,7 +91,7 @@ func compile(entry dict.Dict) errors.E {
 // later.
 //
 // Evaluates literals.
-func link(key string, entry dict.Dict) errors.E {
+func link(key string, entry dict.Dict) errs.Err {
 	for k, v := range entry {
 		varname := key + "." + k
 
@@ -137,7 +137,7 @@ func convertMatchesToDeps(matches [][]string) []string {
 }
 
 // Collect apprc for current build and mode.
-func collect(mode string) errors.E {
+func collect(mode string) errs.Err {
 	default_, ok := rc["_default"]
 	if !ok {
 		panic("Must have `_default` mode defined")
@@ -168,10 +168,10 @@ func mustValidateDict(k string, v any) dict.Dict {
 	return d
 }
 
-func Get(key string) (dict.Dict, errors.E) {
+func Get(key string) (dict.Dict, errs.Err) {
 	r, ok := rc[key]
 	if !ok {
-		return nil, errors.New(
+		return nil, errs.New(
 			"No such configuration with key "+key,
 			err.CODE_NOT_FOUND)
 	}

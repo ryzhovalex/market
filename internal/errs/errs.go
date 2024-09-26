@@ -1,4 +1,4 @@
-package errors
+package errs
 
 import "fmt"
 
@@ -10,7 +10,7 @@ type ErrData struct {
 	code string
 }
 
-type E interface {
+type Err interface {
 	Error() string
 	Msg() string
 	Code() string
@@ -35,7 +35,7 @@ func New(msg string, code string) *ErrData {
 	return &ErrData{msg, code}
 }
 
-func FromBase(e error) E {
+func FromBase(e error) Err {
 	return New(e.Error(), CODE_ERR)
 }
 

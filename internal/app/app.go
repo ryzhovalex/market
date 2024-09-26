@@ -5,13 +5,13 @@ import (
 
 	"github.com/joho/godotenv"
 	"github.com/slimebones/market/internal/apprc"
-	"github.com/slimebones/market/internal/errors"
+	"github.com/slimebones/market/internal/errs"
 )
 
 var MODE_ENV string = "MARKET_MODE"
 var MODE string
 
-func Init() errors.E {
+func Init() errs.Err {
 	be := godotenv.Load()
 	if be != nil {
 		panic("Error loading .env file")
@@ -23,7 +23,7 @@ func Init() errors.E {
 	}
 
 	e := apprc.Load(MODE)
-	errors.Unwrap(e)
+	errs.Unwrap(e)
 
 	return nil
 }
